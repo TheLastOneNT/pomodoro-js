@@ -1,5 +1,5 @@
 // ui.js
-// Handles DOM interactions, layout logic, and rendering of timer state and sidebar controls.
+// Handles DOM interactions, layout logic, and rendering of timer state.
 
 import {
   getPlanSettings,
@@ -9,17 +9,11 @@ import {
   getTheme,
   setTheme,
 } from './state.js';
-import {
-  onTimerEvent,
-  performPrimaryAction,
-  resetTimer,
-  applyPlanSettings,
-  getTimerState,
-} from './timer.js';
+import { onTimerEvent, toggleTimer, resetTimer, selectMode, applyPlanSettings, getTimerState } from './timer.js';
 
 const pickerLimits = {
   focusMinutes: { min: 5, max: 120 },
-  relaxMinutes: { min: 1, max: 60 },
+  breakMinutes: { min: 1, max: 60 },
   cycles: { min: 1, max: 12 },
 };
 
@@ -28,8 +22,6 @@ let toastTimeout;
 
 export function initUI() {
   const body = document.body;
-  body.style.touchAction = 'manipulation';
-
   const timeOutput = document.getElementById('time-output');
   const statusLabel = document.getElementById('status-label');
   const primaryButton = document.getElementById('primary-action');
@@ -37,6 +29,7 @@ export function initUI() {
   const timerCircle = document.getElementById('timer-circle');
   const progressCircle = document.querySelector('.ring-progress');
   const circumference = 2 * Math.PI * 108;
+  const modeButtons = document.querySelectorAll('.mode-button');
   const sidebarToggle = document.getElementById('sidebar-toggle');
   const sidebarClose = document.getElementById('sidebar-close');
   const overlay = document.getElementById('overlay');
@@ -51,8 +44,6 @@ export function initUI() {
   const themeButtons = document.querySelectorAll('.theme-button');
   const signInButton = document.getElementById('sign-in');
   const toast = document.getElementById('toast');
-  const cyclesLeftNode = document.getElementById('cycles-left');
-  const totalRemainingNode = document.getElementById('total-remaining');
 
   progressCircle.style.strokeDasharray = circumference.toString();
 
@@ -65,44 +56,49 @@ export function initUI() {
     progressCircle.style.strokeDashoffset = offset;
   };
 
-  const updateTone = (tone) => {
-    body.dataset.tone = tone;
-  };
-
-  const updateCycleInfo = (state) => {
-    cyclesLeftNode.textContent = `Cycles left: ${state.cyclesLeft}`;
-    totalRemainingNode.textContent = `Total remaining: ${formatDurationFromSeconds(
-      state.totalRemainingSeconds,
-    )}`;
-  };
-
-  const updateDisplay = (state, message) => {
+  const updateDisplay = (state) => {
     timeOutput.textContent = formatTime(state.remainingSeconds);
     statusLabel.textContent = state.statusLabel;
-    primaryButton.textContent = state.primaryLabel;
+    primaryButton.textContent = primaryLabel(state.status);
     updateProgress(state);
-    updateTone(state.tone);
-    updateCycleInfo(state);
-    if (message) {
-      showToast(message, toast);
-    }
+    highlightMode(state.mode);
   };
 
-  onTimerEvent('timer:update', (event) => updateDisplay(event.detail, event.detail.message));
+  onTimerEvent('timer:update', (event) => updateDisplay(event.detail));
   updateDisplay(getTimerState());
 
-  primaryButton.addEventListener('click', () => performPrimaryAction());
-  timerCircle.addEventListener('click', () => performPrimaryAction());
+  primaryButton.addEventListener('click', () => {
+    toggleTimer();
+  });
+
+  timerCircle.addEventListener('click', () => {
+    toggleTimer();
+  });
   timerCircle.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      performPrimaryAction();
+      toggleTimer();
     }
   });
 
   resetButton.addEventListener('click', () => {
     resetTimer();
+    showToast('Timer reset', toast);
   });
+
+  modeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const mode = button.dataset.mode;
+      selectMode(mode);
+      highlightMode(mode);
+    });
+  });
+
+  function highlightMode(mode) {
+    modeButtons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.mode === mode);
+    });
+  }
 
   sidebarToggle.addEventListener('click', () => openSidebar(body));
   sidebarClose.addEventListener('click', () => closeSidebar(body));
@@ -128,19 +124,45 @@ export function initUI() {
     });
   });
 
-  // Number pickers with keyboard input and long-press step controls.
-  pickers.forEach((picker) => setupPicker(picker, summary));
+  // Number pickers manage plan values without native inputs to keep layout consistent.
+  pickers.forEach((picker) => {
+    const field = picker.dataset.field;
+    const valueElement = picker.querySelector('[data-field-value]');
+    valueElement.textContent = pickerValues[field];
+    picker.addEventListener('click', (event) => {
+      const control = event.target.closest('.picker-control');
+      if (!control) return;
+      const direction = control.dataset.direction === 'up' ? 1 : -1;
+      adjustPicker(field, direction);
+      valueElement.textContent = pickerValues[field];
+      updateSummaryText(summary);
+    });
+  });
+
+  function adjustPicker(field, delta) {
+    const limits = pickerLimits[field];
+    const next = pickerValues[field] + delta;
+    pickerValues[field] = clamp(next, limits.min, limits.max);
+  }
+
+  function updateSummaryText(node) {
+    const focus = pickerValues.focusMinutes;
+    const brk = pickerValues.breakMinutes;
+    const cycles = pickerValues.cycles;
+    const total = focus * cycles + brk * Math.max(0, cycles - 1);
+    node.textContent = `${focus} / ${brk} × ${cycles} ≈ ${formatDuration(total)}`;
+  }
 
   updateSummaryText(summary);
 
   applyPlanButton.addEventListener('click', () => {
+    resetTimer();
     updatePlanSettings({
       focusMinutes: pickerValues.focusMinutes,
-      relaxMinutes: pickerValues.relaxMinutes,
+      breakMinutes: pickerValues.breakMinutes,
       cycles: pickerValues.cycles,
     });
     applyPlanSettings();
-    closeSidebar(body);
     showToast('Plan applied', toast);
   });
 
@@ -176,63 +198,6 @@ export function initUI() {
   });
 }
 
-function setupPicker(picker, summaryNode) {
-  const field = picker.dataset.field;
-  const input = picker.querySelector('[data-field-value]');
-  input.value = pickerValues[field];
-  const controls = picker.querySelectorAll('.picker-control');
-  let holdInterval;
-  let holdTimeout;
-
-  const stepValue = (delta) => {
-    const limits = pickerLimits[field];
-    const next = clamp(parseInt(input.value, 10) + delta, limits.min, limits.max);
-    pickerValues[field] = next;
-    input.value = next;
-    updateSummaryText(summaryNode);
-  };
-
-  const stopHold = () => {
-    clearInterval(holdInterval);
-    clearTimeout(holdTimeout);
-  };
-
-  const startHold = (delta) => {
-    stepValue(delta);
-    holdTimeout = setTimeout(() => {
-      holdInterval = setInterval(() => stepValue(delta), 100);
-    }, 300);
-  };
-
-  controls.forEach((control) => {
-    const delta = control.dataset.direction === 'up' ? 1 : -1;
-    control.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-      startHold(delta);
-    });
-    control.addEventListener('touchstart', (event) => {
-      event.preventDefault();
-      startHold(delta);
-    });
-    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach((evt) => {
-      control.addEventListener(evt, stopHold);
-    });
-  });
-
-  input.addEventListener('input', () => {
-    const limits = pickerLimits[field];
-    const parsed = parseInt(input.value || '0', 10);
-    pickerValues[field] = clamp(parsed, limits.min, limits.max);
-  });
-
-  input.addEventListener('blur', () => {
-    const limits = pickerLimits[field];
-    pickerValues[field] = clamp(parseInt(input.value, 10) || limits.min, limits.min, limits.max);
-    input.value = pickerValues[field];
-    updateSummaryText(summaryNode);
-  });
-}
-
 function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60)
     .toString()
@@ -243,32 +208,30 @@ function formatTime(totalSeconds) {
   return `${minutes}:${seconds}`;
 }
 
-function formatDurationFromSeconds(totalSeconds) {
-  const minutes = Math.round(totalSeconds / 60);
-  if (minutes < 60) {
-    return `${minutes} min`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (mins === 0) {
-    return `${hours}h`;
-  }
-  return `${hours}h ${mins}m`;
+function primaryLabel(status) {
+  if (status === 'running') return 'Pause';
+  if (status === 'paused') return 'Resume';
+  return 'Start';
 }
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function updateSummaryText(node) {
-  const focus = pickerValues.focusMinutes;
-  const relax = pickerValues.relaxMinutes;
-  const cycles = pickerValues.cycles;
-  const total = focus * cycles + relax * cycles;
-  node.textContent = `${focus} / ${relax} × ${cycles} ≈ ${formatDurationFromSeconds(total * 60)}`;
+function formatDuration(minutes) {
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) {
+    return `${hours} hr`;
+  }
+  return `${hours} hr ${mins} min`;
 }
 
 function openSidebar(body) {
+  // Body class controls overlay visibility and slide-in motion.
   body.classList.add('sidebar-open');
 }
 
@@ -282,7 +245,7 @@ function showToast(message, node) {
   node.classList.add('visible');
   toastTimeout = setTimeout(() => {
     node.classList.remove('visible');
-  }, 2400);
+  }, 2200);
 }
 
 function applyTheme(body, theme, buttons) {

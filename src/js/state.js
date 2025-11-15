@@ -3,7 +3,8 @@
 
 const DEFAULT_PLAN = {
   focusMinutes: 25,
-  relaxMinutes: 5,
+  breakMinutes: 5,
+  longBreakMinutes: 15,
   cycles: 4,
 };
 
@@ -30,6 +31,11 @@ function saveTheme(nextTheme) {
   localStorage.setItem(THEME_KEY, nextTheme);
 }
 
+function calculateLongBreak(minutes) {
+  // Use a simple rule: long break lasts three short breaks but never below 10 min.
+  return Math.min(45, Math.max(10, minutes * 3));
+}
+
 export function getPlanSettings() {
   return { ...plan };
 }
@@ -39,6 +45,9 @@ export function updatePlanSettings(nextPlan) {
     ...plan,
     ...nextPlan,
   };
+  if (nextPlan.breakMinutes) {
+    plan.longBreakMinutes = calculateLongBreak(plan.breakMinutes);
+  }
   emit('plan:change', { plan: { ...plan } });
 }
 

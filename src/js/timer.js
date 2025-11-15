@@ -1,262 +1,203 @@
 // timer.js
-// Implements a single-source timer state machine for focus/relax cycles.
-// States: ready → running (focus) → running (relax) → waiting/ready, with pause/resume support.
+// Implements the timer state machine (ready → running → paused → finished) and keeps
+// timing logic separate from the DOM. Auto-cycle and sound are handled here so the UI can
+// remain a thin layer over the data.
 
 import { getPlanSettings, getPreferences } from './state.js';
 
-const timerEvents = new EventTarget();
-let tickerId = null;
-
-const timerState = {
-  status: 'ready', // ready | running | paused | waiting
-  phase: 'focus', // focus | relax
-  remainingSeconds: 0,
-  durationSeconds: 0,
-  cyclesLeft: 0,
-  totalCycles: 0,
-  isRunning: false,
+const MODE_LABELS = {
+  focus: 'Focus',
+  short: 'Short Break',
+  long: 'Long Break',
 };
 
-initializeFromPlan();
+const timerEvents = new EventTarget();
 
-function initializeFromPlan() {
+// Single source of truth for the timer state machine.
+// status can be "ready", "running", "paused", or "finished".
+const timerState = {
+  mode: 'focus',
+  status: 'ready',
+  statusLabel: 'Ready',
+  remainingSeconds: getDuration('focus'),
+  durationSeconds: getDuration('focus'),
+  isRunning: false,
+  completedFocusSessions: 0,
+};
+
+let intervalId = null;
+let audioContext;
+
+function getDuration(mode) {
   const plan = getPlanSettings();
-  timerState.status = 'ready';
-  timerState.phase = 'focus';
-  timerState.durationSeconds = plan.focusMinutes * 60;
-  timerState.remainingSeconds = timerState.durationSeconds;
-  timerState.cyclesLeft = plan.cycles;
-  timerState.totalCycles = plan.cycles;
-  timerState.isRunning = false;
-}
-
-function emit(message) {
-  timerEvents.dispatchEvent(
-    new CustomEvent('timer:update', {
-      detail: {
-        ...timerState,
-        statusLabel: deriveStatusLabel(),
-        primaryLabel: derivePrimaryLabel(),
-        tone: deriveTone(),
-        totalRemainingSeconds: calculateTotalRemaining(),
-        message,
-      },
-    }),
-  );
-}
-
-function deriveStatusLabel() {
-  if (timerState.status === 'ready') return 'Ready';
-  if (timerState.status === 'waiting') return 'Waiting';
-  if (timerState.status === 'paused') return 'Paused';
-  return timerState.phase === 'focus' ? 'Focus' : 'Relax';
-}
-
-function derivePrimaryLabel() {
-  if (timerState.status === 'running') return 'Pause';
-  if (timerState.status === 'paused') return 'Resume';
-  if (timerState.status === 'waiting') return 'Continue';
-  return 'Start';
-}
-
-function deriveTone() {
-  if (timerState.status === 'paused') return 'paused';
-  if (timerState.status === 'waiting') return 'waiting';
-  if (timerState.status === 'ready') return 'ready';
-  return timerState.phase === 'focus' ? 'focus' : 'relax';
-}
-
-function calculateTotalRemaining() {
-  const plan = getPlanSettings();
-  const focusSeconds = plan.focusMinutes * 60;
-  const relaxSeconds = plan.relaxMinutes * 60;
-  const cycles = Math.max(timerState.cyclesLeft, 0);
-
-  if (timerState.status === 'ready') {
-    return cycles * (focusSeconds + relaxSeconds);
+  switch (mode) {
+    case 'short':
+      return plan.breakMinutes * 60;
+    case 'long':
+      return plan.longBreakMinutes * 60;
+    case 'focus':
+    default:
+      return plan.focusMinutes * 60;
   }
+}
 
-  if (timerState.phase === 'focus') {
-    const remainingCycles = Math.max(cycles - 1, 0);
-    return (
-      timerState.remainingSeconds +
-      relaxSeconds +
-      remainingCycles * (focusSeconds + relaxSeconds)
-    );
-  }
-
-  // Relax phase: the current focus portion already finished.
-  const remainingCycles = Math.max(cycles - 1, 0);
-  return timerState.remainingSeconds + remainingCycles * (focusSeconds + relaxSeconds);
+function emitUpdate() {
+  timerEvents.dispatchEvent(new CustomEvent('timer:update', { detail: { ...timerState } }));
 }
 
 function clearTicker() {
-  if (tickerId) {
-    clearInterval(tickerId);
-    tickerId = null;
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
   }
 }
 
 function startTicker() {
+  // Interval tick drives the countdown once per second.
   clearTicker();
-  tickerId = setInterval(handleTick, 1000);
+  intervalId = setInterval(handleTick, 1000);
 }
 
 function handleTick() {
   if (timerState.remainingSeconds <= 0) {
-    handlePhaseCompletion();
+    completeSession();
     return;
   }
-
   timerState.remainingSeconds -= 1;
-  emit();
-
+  emitUpdate();
   if (timerState.remainingSeconds <= 0) {
-    handlePhaseCompletion();
+    completeSession();
   }
 }
 
-function handlePhaseCompletion() {
+function completeSession() {
+  // Session finished: notify UI, optionally auto-cycle to the next phase.
   clearTicker();
   timerState.remainingSeconds = 0;
+  timerState.status = 'finished';
   timerState.isRunning = false;
-
-  if (timerState.phase === 'focus') {
-    startRelax();
-    playChime();
-    emit('Relax started');
-    return;
-  }
-
-  // Relax finished = full cycle completed.
-  timerState.cyclesLeft = Math.max(timerState.cyclesLeft - 1, 0);
+  timerState.statusLabel = 'Ready';
+  emitUpdate();
   playChime();
-
-  if (timerState.cyclesLeft <= 0) {
-    initializeFromPlan();
-    emit('Plan finished. Good job!');
-    return;
-  }
-
+  const nextMode = resolveNextMode();
+  setMode(nextMode);
   const { autoCycle } = getPreferences();
   if (autoCycle) {
-    startFocus('Next focus started — ' + timerState.cyclesLeft + ' cycles left.');
-    return;
+    startTimer();
   }
-
-  prepareWaitingState();
-  emit('Cycle finished — ' + timerState.cyclesLeft + ' cycles left. Press Continue to start the next cycle.');
 }
 
-function prepareWaitingState() {
-  const plan = getPlanSettings();
-  timerState.status = 'waiting';
-  timerState.phase = 'focus';
-  timerState.durationSeconds = plan.focusMinutes * 60;
-  timerState.remainingSeconds = timerState.durationSeconds;
-  timerState.isRunning = false;
-}
-
-function startFocus(message = 'Timer started') {
-  const plan = getPlanSettings();
-  timerState.status = 'running';
-  timerState.phase = 'focus';
-  timerState.durationSeconds = plan.focusMinutes * 60;
-  timerState.remainingSeconds = timerState.remainingSeconds || timerState.durationSeconds;
-  timerState.isRunning = true;
-  startTicker();
-  emit(message);
-}
-
-function startRelax() {
-  const plan = getPlanSettings();
-  timerState.status = 'running';
-  timerState.phase = 'relax';
-  timerState.durationSeconds = plan.relaxMinutes * 60;
-  timerState.remainingSeconds = timerState.durationSeconds;
-  timerState.isRunning = true;
-  startTicker();
-}
-
-function pauseTimer() {
-  clearTicker();
-  timerState.status = 'paused';
-  timerState.isRunning = false;
-  emit('Timer paused');
-}
-
-function resumeTimer() {
-  timerState.status = 'running';
-  timerState.isRunning = true;
-  startTicker();
-  emit('Timer resumed');
+function resolveNextMode() {
+  // Focus sessions count toward the cycle limit before a long break.
+  if (timerState.mode === 'focus') {
+    timerState.completedFocusSessions += 1;
+    const plan = getPlanSettings();
+    if (timerState.completedFocusSessions >= plan.cycles) {
+      timerState.completedFocusSessions = 0;
+      return 'long';
+    }
+    return 'short';
+  }
+  if (timerState.mode === 'short' || timerState.mode === 'long') {
+    return 'focus';
+  }
+  return 'focus';
 }
 
 function playChime() {
+  // Lightweight oscillator beep to avoid bundling external assets.
   const { sound } = getPreferences();
   if (!sound) return;
-
   try {
     if (typeof window === 'undefined') return;
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
+    audioContext = audioContext || new AudioContextClass();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
     oscillator.type = 'sine';
     oscillator.frequency.value = 880;
     gain.gain.value = 0.08;
     oscillator.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(audioContext.destination);
     oscillator.start();
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    oscillator.stop(ctx.currentTime + 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+    oscillator.stop(audioContext.currentTime + 0.5);
   } catch (error) {
-    // Fail silently to keep UX smooth if audio cannot play.
+    // Ignore audio errors to keep the timer resilient.
   }
 }
 
-export function onTimerEvent(type, listener) {
-  timerEvents.addEventListener(type, listener);
+function setMode(mode) {
+  // Reset timer to the duration of the selected mode and return to Ready.
+  timerState.mode = mode;
+  timerState.durationSeconds = getDuration(mode);
+  timerState.remainingSeconds = timerState.durationSeconds;
+  timerState.status = 'ready';
+  timerState.statusLabel = 'Ready';
+  timerState.isRunning = false;
+  clearTicker();
+  emitUpdate();
 }
 
-export function performPrimaryAction() {
+function startTimer() {
+  // Starting from ready or finished always refreshes the remaining time.
+  if (!timerState.mode) {
+    setMode('focus');
+  }
+  timerState.status = 'running';
+  timerState.statusLabel = MODE_LABELS[timerState.mode];
+  timerState.isRunning = true;
+  if (timerState.remainingSeconds <= 0 || timerState.remainingSeconds > timerState.durationSeconds) {
+    timerState.remainingSeconds = timerState.durationSeconds;
+  }
+  startTicker();
+  emitUpdate();
+}
+
+function pauseTimer() {
+  clearTicker();
+  timerState.isRunning = false;
+  timerState.status = 'paused';
+  timerState.statusLabel = 'Paused';
+  emitUpdate();
+}
+
+export function toggleTimer() {
   if (timerState.status === 'running') {
     pauseTimer();
     return;
   }
-
-  if (timerState.status === 'paused') {
-    resumeTimer();
-    return;
-  }
-
-  if (timerState.status === 'waiting') {
-    startFocus('Next focus started — ' + timerState.cyclesLeft + ' cycles left.');
-    return;
-  }
-
-  startFocus('Timer started');
+  startTimer();
 }
 
 export function resetTimer() {
-  clearTicker();
-  initializeFromPlan();
-  emit('Timer reset');
+  timerState.completedFocusSessions = 0;
+  setMode(timerState.mode || 'focus');
+}
+
+export function selectMode(mode) {
+  if (mode === 'long') {
+    timerState.completedFocusSessions = 0;
+  }
+  setMode(mode);
 }
 
 export function applyPlanSettings() {
+  // Called when the user confirms new plan values via the sidebar picker.
+  timerState.durationSeconds = getDuration(timerState.mode);
+  timerState.remainingSeconds = timerState.durationSeconds;
+  timerState.status = 'ready';
+  timerState.statusLabel = 'Ready';
+  timerState.isRunning = false;
   clearTicker();
-  initializeFromPlan();
-  emit();
+  emitUpdate();
 }
 
 export function getTimerState() {
-  return {
-    ...timerState,
-    statusLabel: deriveStatusLabel(),
-    primaryLabel: derivePrimaryLabel(),
-    tone: deriveTone(),
-    totalRemainingSeconds: calculateTotalRemaining(),
-  };
+  return { ...timerState };
+}
+
+export function onTimerEvent(type, listener) {
+  timerEvents.addEventListener(type, listener);
 }
