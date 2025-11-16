@@ -169,7 +169,7 @@ body {
   stroke-width: 10;
   stroke-linecap: round;
   transform-origin: 50% 50%;
-  transform: rotate(-90deg) scale(1, -1);
+  transform: rotate(-90deg);
   stroke-dasharray: 679;
   stroke-dashoffset: 0;
   transition: stroke-dashoffset 0.3s linear;
@@ -217,16 +217,30 @@ body {
   transform: translateY(1px);
 }
 
-.btn-primary {
+.btn-main {
   background: var(--tone-color);
   color: #041106;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  width: 200px;
+  max-width: 100%;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .btn-secondary {
   background: rgba(255, 75, 92, 0.12);
   border: 1px solid rgba(255, 75, 92, 0.6);
   color: var(--accent-red);
+}
+
+.btn-apply {
+  background: var(--accent-green);
+  color: #041106;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.btn-apply:hover {
+  filter: brightness(1.05);
 }
 
 .btn-ghost {
@@ -449,12 +463,15 @@ body.sidebar-open .sidebar {
   gap: 12px;
 }
 
+.action-buttons .btn {
+  flex: 1;
+}
+
 .switches {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
   gap: 12px;
-  justify-content: space-between;
+  align-items: center;
 }
 
 .switch {
@@ -502,29 +519,39 @@ body.sidebar-open .sidebar {
   font-weight: 500;
 }
 
-.theme-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+.theme-toggle {
+  display: flex;
+  justify-content: stretch;
 }
 
-.theme-button {
-  border-radius: 12px;
+.theme-toggle-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 14px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-muted);
-  color: var(--text-muted);
+  color: var(--text-main);
   padding: 12px 16px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: border 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.theme-button.active {
-  background: linear-gradient(
-    120deg,
-    var(--accent-purple),
-    var(--accent-yellow)
-  );
-  color: #050505;
+.theme-toggle-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-purple);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
+}
+
+.theme-icon {
+  font-size: 1.2rem;
+}
+
+.theme-text {
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
 }
 
 .placeholder-card {
@@ -626,10 +653,6 @@ body[data-tone="waiting"] {
   }
 
   .controls {
-    width: 100%;
-  }
-
-  .btn {
     width: 100%;
   }
 
