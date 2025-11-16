@@ -12,7 +12,7 @@ const SOUND_PATHS = {
   relaxStart: "sounds/relax-start.mp3",
   countdown: "sounds/countdown.wav",
   metronome: "sounds/metronome.mp3",
-  relaxAmbient: "sounds/relax-ambient.mp3", // новый фоновый звук для перерыва
+  relaxAmbient: "sounds/relax-ambient.mp3",
 };
 
 const audioBank = {
@@ -24,11 +24,14 @@ const audioBank = {
   relaxStart: createAudio(SOUND_PATHS.relaxStart, 0.25),
   countdown: createAudio(SOUND_PATHS.countdown, 0.25),
   metronome: createAudio(SOUND_PATHS.metronome, 0.3),
-  relaxAmbient: createAudio(SOUND_PATHS.relaxAmbient, 0.2, true), // loop
+  relaxAmbient: createAudio(SOUND_PATHS.relaxAmbient, 0.2, true),
 };
 
 let isSoundEnabled = getPreferences().sound;
 let metronomeId = null;
+
+// 🔹 новый флаг – уже "разлочили" отложенные звуки или нет
+let deferredSoundsPrimed = false;
 
 // Keep local flag in sync with sidebar toggle; stop ambience + one-shots, но не ломаем интервал метронома.
 onStateEvent("preferences:change", (event) => {
@@ -67,7 +70,43 @@ function stopAllOneShots() {
   });
 }
 
-/* ---------- Public API ---------- */
+/* ---------- NEW: priming для мобилок ---------- */
+
+// вызываем один раз из обработчика клика (через timer.js)
+export function primeDeferredSounds() {
+  if (deferredSoundsPrimed) return;
+  deferredSoundsPrimed = true;
+
+  const keysToPrime = ["countdown", "relaxAmbient"];
+
+  keysToPrime.forEach((key) => {
+    const audio = audioBank[key];
+    if (!audio) return;
+
+    const wasMuted = audio.muted;
+    audio.muted = true; // чтобы пользователь не слышал "тычок"
+    audio.currentTime = 0;
+
+    const p = audio.play();
+    if (p && typeof p.then === "function") {
+      p.then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = wasMuted;
+      }).catch(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = wasMuted;
+      });
+    } else {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = wasMuted;
+    }
+  });
+}
+
+/* ---------- Public API (как было) ---------- */
 
 export function playModeSwitchSound(mode) {
   if (mode === "focus") {
@@ -114,7 +153,6 @@ export function stopCountdownSound() {
 export function startMetronome() {
   if (!isSoundEnabled) return;
   stopMetronome();
-  // Fire an immediate tick so the beat is audible right away.
   playClip(audioBank.metronome);
   metronomeId = setInterval(() => playClip(audioBank.metronome), 1000);
 }
@@ -133,9 +171,6 @@ export function startRelaxAmbient() {
   if (!isSoundEnabled) return;
   const a = audioBank.relaxAmbient;
   try {
-    // не обнуляем currentTime, чтобы луп шел естественно;
-    // если хочешь всегда с начала — раскомментируй строку ниже:
-    // a.currentTime = 0;
     a.play();
   } catch (e) {}
 }

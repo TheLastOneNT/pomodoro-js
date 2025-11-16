@@ -12,6 +12,7 @@ import {
   stopCountdownSound,
   startRelaxAmbient,
   stopRelaxAmbient,
+  primeDeferredSounds,
 } from "./sound.js";
 
 const timerEvents = new EventTarget();
@@ -256,6 +257,8 @@ export function onTimerEvent(type, listener) {
 }
 
 export function performPrimaryAction() {
+  primeDeferredSounds();
+
   if (timerState.status === "running") {
     pauseTimer();
     return;
