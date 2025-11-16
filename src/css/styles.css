@@ -621,6 +621,13 @@ body[data-tone="waiting"] {
 
   .controls {
     flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .controls .btn {
+    width: 100%;
+    max-width: 260px;
   }
 
   .sidebar {
