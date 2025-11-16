@@ -380,76 +380,170 @@ body.sidebar-open .sidebar {
 }
 
 .pickers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(110px, 1fr));
-  gap: 12px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: stretch;
 }
 
 .number-picker {
-  background: var(--bg-muted);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 14px;
-  text-align: left;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  background: radial-gradient(140% 180% at 50% 0%, #111827 0%, #050812 70%);
+  border: 1px solid #111827;
+  border-radius: 20px;
+  padding: 14px 10px 26px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .picker-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   margin-bottom: 8px;
+  text-align: center;
 }
 
 .picker-label {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   color: var(--text-muted);
-  letter-spacing: 0.12rem;
+  letter-spacing: 0.18rem;
 }
 
 .picker-hint {
-  font-size: 0.8rem;
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
   color: var(--text-muted);
+  opacity: 0.5;
 }
 
 .picker-body {
-  display: flex;
+  display: grid;
+  grid-template-rows: 32px auto 32px;
+  justify-items: center;
   align-items: center;
-  gap: 12px;
+  row-gap: 6px;
+  padding: 6px 0;
+  min-height: 120px;
 }
 
 .picker-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: contents;
 }
 
 .picker-control {
-  width: 32px;
+  width: 100%;
+  max-width: 110px;
   height: 32px;
-  border-radius: 10px;
-  border: 1px solid var(--border-subtle);
-  background: transparent;
-  color: var(--text-main);
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   cursor: pointer;
-  transition: transform 0.15s ease, border 0.2s ease;
+  font-size: 0;
+  transition: transform 0.12s, opacity 0.12s, background 0.12s;
+}
+
+.picker-control[data-direction="up"] {
+  grid-row: 1;
+}
+
+.picker-control[data-direction="down"] {
+  grid-row: 3;
+}
+
+.picker-control::before {
+  content: "";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-size: 22px;
+  line-height: 1;
+  transform: scaleX(1.7) scaleY(0.7);
+}
+
+.picker-control[data-direction="up"]::before {
+  content: "^";
+}
+
+.picker-control[data-direction="down"]::before {
+  content: "v";
+}
+
+.picker-control:hover {
+  background: rgba(255, 255, 255, 0.03);
+  transform: translateY(-1px);
 }
 
 .picker-control:active {
-  transform: scale(0.96);
+  transform: translateY(0);
 }
 
 .picker-input {
-  width: 80px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
+  grid-row: 2;
+  width: 100%;
+  max-width: 110px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: center;
+  font: 800 28px/1.05 "SF Pro Display", "SF Pro Text", system-ui, -apple-system,
+    Inter, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
   color: var(--text-main);
-  font-size: 1.1rem;
-  font-weight: 700;
+}
+
+.picker-input::-webkit-outer-spin-button,
+.picker-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.picker-input {
+  -moz-appearance: textfield;
+}
+
+.picker-input:focus {
+  outline: none;
+}
+
+/* Фокус – зелёный */
+.number-picker[data-field="focusMinutes"] {
+  border-color: rgba(34, 197, 94, 0.55);
+}
+.number-picker[data-field="focusMinutes"] .picker-input,
+.number-picker[data-field="focusMinutes"] .picker-control::before {
+  color: var(--accent-green);
+}
+
+/* Перерыв – жёлто-оранжевый */
+.number-picker[data-field="relaxMinutes"] {
+  border-color: rgba(249, 115, 22, 0.55);
+}
+.number-picker[data-field="relaxMinutes"] .picker-input,
+.number-picker[data-field="relaxMinutes"] .picker-control::before {
+  color: var(--accent-yellow);
+}
+
+/* Циклы – красный */
+.number-picker[data-field="cycles"] {
+  border-color: rgba(255, 75, 92, 0.6);
+}
+.number-picker[data-field="cycles"] .picker-input,
+.number-picker[data-field="cycles"] .picker-control::before {
+  color: var(--accent-red);
 }
 
 .summary {
@@ -664,6 +758,7 @@ body[data-tone="waiting"] {
   }
 
   .pickers {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    display: flex;
+    gap: 10px;
   }
 }
