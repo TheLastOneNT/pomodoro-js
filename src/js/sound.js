@@ -31,8 +31,10 @@ let metronomeId = null;
 // Keep local flag in sync with sidebar toggle; stop metronome immediately when muted.
 onStateEvent("preferences:change", (event) => {
   isSoundEnabled = event.detail.preferences.sound;
+
   if (!isSoundEnabled) {
-    stopMetronome();
+    audioBank.metronome.pause();
+    audioBank.metronome.currentTime = 0;
     stopAllOneShots();
   }
 });
