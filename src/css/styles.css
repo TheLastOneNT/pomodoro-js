@@ -464,20 +464,21 @@ body.sidebar-open .sidebar {
 
 .picker-control::before {
   content: "";
-  display: block;
-  width: 32px;
-  height: 32px;
-  text-align: center;
-  line-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   font-size: 22px;
+  line-height: 1;
+  transform: scaleX(1.7) scaleY(0.7);
 }
 
 .picker-control[data-direction="up"]::before {
-  content: "˄";
+  content: "^";
 }
 
 .picker-control[data-direction="down"]::before {
-  content: "˅";
+  content: "v";
 }
 
 .picker-control:hover {
