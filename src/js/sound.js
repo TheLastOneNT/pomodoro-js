@@ -52,11 +52,10 @@ function createAudio(path, volume, loop = false) {
 
 function playClip(audio) {
   if (!isSoundEnabled || !audio) return;
-  try {
-    audio.currentTime = 0;
-    audio.play();
-  } catch (error) {
-    // Autoplay restrictions or missing assets should not break the app.
+  audio.currentTime = 0;
+  const p = audio.play();
+  if (p && typeof p.catch === "function") {
+    p.catch(() => {});
   }
 }
 
