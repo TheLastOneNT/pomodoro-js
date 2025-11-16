@@ -1,6 +1,5 @@
 // timer.js
 // Implements a single-source timer state machine for focus/relax cycles.
-// States: ready → running (focus) → running (relax) → waiting/ready, with pause/resume support.
 
 import { getPlanSettings, getPreferences } from "./state.js";
 import {
@@ -10,6 +9,9 @@ import {
   playSessionStartSound,
   startMetronome,
   stopMetronome,
+  stopCountdownSound,
+  startRelaxAmbient,
+  stopRelaxAmbient,
 } from "./sound.js";
 
 const timerEvents = new EventTarget();
@@ -120,13 +122,16 @@ function handleTick() {
   }
 
   timerState.remainingSeconds -= 1;
+
+  // Теперь предупреждаем за 3 секунды, а не за 5
   if (
     timerState.status === "running" &&
     timerState.remainingSeconds > 0 &&
-    timerState.remainingSeconds <= 5
+    timerState.remainingSeconds <= 3
   ) {
     playCountdownSound();
   }
+
   emit();
 
   if (timerState.remainingSeconds <= 0) {
@@ -138,6 +143,7 @@ function handlePhaseCompletion() {
   clearTicker();
   timerState.remainingSeconds = 0;
   timerState.isRunning = false;
+  stopCountdownSound(); // обрубаем писк при смене фазы
 
   if (timerState.phase === "focus") {
     startRelax();
@@ -150,6 +156,7 @@ function handlePhaseCompletion() {
 
   if (timerState.cyclesLeft <= 0) {
     playModeSwitchSound("ready");
+    stopRelaxAmbient();
     initializeFromPlan();
     emit("Plan finished. Good job!");
     return;
@@ -179,6 +186,7 @@ function prepareWaitingState() {
   timerState.durationSeconds = plan.focusMinutes * 60;
   timerState.remainingSeconds = timerState.durationSeconds;
   timerState.isRunning = false;
+  stopRelaxAmbient();
 }
 
 function startFocus(message = "Timer started") {
@@ -189,6 +197,10 @@ function startFocus(message = "Timer started") {
   timerState.remainingSeconds =
     timerState.remainingSeconds || timerState.durationSeconds;
   timerState.isRunning = true;
+
+  stopRelaxAmbient();
+  stopCountdownSound();
+
   playModeSwitchSound("focus");
   playSessionStartSound("focus");
   startMetronome();
@@ -204,8 +216,11 @@ function startRelax() {
   timerState.durationSeconds = plan.relaxMinutes * 60;
   timerState.remainingSeconds = timerState.durationSeconds;
   timerState.isRunning = true;
+
+  stopCountdownSound();
   playModeSwitchSound("relax");
   playSessionStartSound("relax");
+  startRelaxAmbient();
   startTicker();
 }
 
@@ -214,6 +229,8 @@ function pauseTimer() {
   timerState.status = "paused";
   timerState.isRunning = false;
   stopMetronome();
+  stopRelaxAmbient();
+  stopCountdownSound();
   playModeSwitchSound("paused");
   playPauseSound();
   emit("Timer paused");
@@ -222,9 +239,13 @@ function pauseTimer() {
 function resumeTimer() {
   timerState.status = "running";
   timerState.isRunning = true;
+
   if (timerState.phase === "focus") {
     startMetronome();
+  } else {
+    startRelaxAmbient();
   }
+
   playSessionStartSound(timerState.phase);
   startTicker();
   emit("Timer resumed");
@@ -258,6 +279,8 @@ export function performPrimaryAction() {
 export function resetTimer() {
   clearTicker();
   stopMetronome();
+  stopRelaxAmbient();
+  stopCountdownSound();
   initializeFromPlan();
   emit("Timer reset");
 }
@@ -265,6 +288,8 @@ export function resetTimer() {
 export function applyPlanSettings() {
   clearTicker();
   stopMetronome();
+  stopRelaxAmbient();
+  stopCountdownSound();
   initializeFromPlan();
   emit();
 }

@@ -2,8 +2,8 @@
 // Keeps plan configuration, user preferences, and theme information decoupled from UI.
 
 const DEFAULT_PLAN = {
-  focusMinutes: 25,
-  relaxMinutes: 5,
+  focusMinutes: 1,
+  relaxMinutes: 1,
   cycles: 4,
 };
 
