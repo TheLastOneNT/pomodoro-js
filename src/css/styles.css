@@ -852,6 +852,16 @@ body[data-tone="waiting"] {
     display: flex;
     gap: 10px;
   }
+
+  .picker-control[data-direction="up"]::before {
+    content: "▲";
+    font-size: 22px;
+  }
+
+  .picker-control[data-direction="down"]::before {
+    content: "▼";
+    font-size: 22px;
+  }
 }
 
 /* =========================
