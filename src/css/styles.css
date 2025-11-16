@@ -474,11 +474,11 @@ body.sidebar-open .sidebar {
 }
 
 .picker-control[data-direction="up"]::before {
-  content: "^";
+  content: "⮝";
 }
 
 .picker-control[data-direction="down"]::before {
-  content: "v";
+  content: "⮟";
 }
 
 .picker-control:hover {
