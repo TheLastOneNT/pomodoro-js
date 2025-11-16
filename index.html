@@ -2,19 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Pomodoro</title>
     <link rel="stylesheet" href="src/css/styles.css" />
   </head>
   <body data-theme="night">
     <div class="app" id="app">
-      <header class="app-header">
+      <header class="app-header" aria-label="Pomodoro header">
         <h1 class="app-title">Pomodoro</h1>
-        <button class="icon-button" id="sidebar-toggle" aria-label="Open settings">
+        <button
+          class="icon-button"
+          id="sidebar-toggle"
+          aria-label="Open settings"
+        >
           <span class="hamburger"></span>
         </button>
       </header>
-
       <main class="layout">
         <section class="timer-panel">
           <div
@@ -37,72 +43,147 @@
             <button id="primary-action" class="btn btn-primary">Start</button>
             <button id="reset-action" class="btn btn-secondary">Reset</button>
           </div>
+          <div class="cycle-stats" aria-live="polite">
+            <span id="cycles-left">Cycles left: 4</span>
+            <span id="total-remaining">Total remaining: 2h 00m</span>
+          </div>
         </section>
       </main>
-
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
       <div class="overlay" id="overlay"></div>
       <aside class="sidebar" id="sidebar" aria-label="Timer settings">
         <div class="sidebar-header">
-          <h2>Plan</h2>
-          <button class="icon-button" id="sidebar-close" aria-label="Close settings">
+          <h2>Settings</h2>
+          <button
+            class="icon-button"
+            id="sidebar-close"
+            aria-label="Close settings"
+          >
             <span class="icon-close">&times;</span>
           </button>
         </div>
-
         <div class="sidebar-tabs" role="tablist">
-          <button class="tab active" data-tab="configure" role="tab" aria-selected="true">Configure</button>
-          <button class="tab" data-tab="select" role="tab" aria-selected="false">Select</button>
+          <button
+            class="tab active"
+            data-tab="configure"
+            role="tab"
+            aria-selected="true"
+          >
+            Configure
+          </button>
+          <button
+            class="tab"
+            data-tab="select"
+            role="tab"
+            aria-selected="false"
+          >
+            Select
+          </button>
         </div>
-
         <div class="tab-panel active" id="configure-panel" role="tabpanel">
-          <div class="mode-selector">
-            <p class="section-label">Sessions</p>
-            <div class="mode-buttons">
-              <button class="mode-button active" data-mode="focus">Focus</button>
-              <button class="mode-button" data-mode="short">Short Break</button>
-              <button class="mode-button" data-mode="long">Long Break</button>
-            </div>
-          </div>
-
-          <div class="pickers">
+          <div class="pickers" role="group" aria-label="Timer settings pickers">
             <div class="number-picker" data-field="focusMinutes">
-              <p class="picker-label">Focus</p>
-              <div class="picker-value">
-                <button class="picker-control" data-direction="down">−</button>
-                <span class="value" data-field-value>25</span>
-                <button class="picker-control" data-direction="up">+</button>
+              <div class="picker-header">
+                <p class="picker-label">Focus</p>
+                <span class="picker-hint">minutes</span>
               </div>
-              <p class="picker-hint">minutes</p>
+              <div class="picker-body">
+                <div class="picker-controls">
+                  <button
+                    class="picker-control"
+                    data-direction="up"
+                    aria-label="Increase focus"
+                  >
+                    +
+                  </button>
+                  <button
+                    class="picker-control"
+                    data-direction="down"
+                    aria-label="Decrease focus"
+                  >
+                    −
+                  </button>
+                </div>
+                <input
+                  class="picker-input"
+                  type="number"
+                  inputmode="numeric"
+                  aria-label="Focus minutes"
+                  data-field-value
+                  value="25"
+                />
+              </div>
             </div>
-            <div class="number-picker" data-field="breakMinutes">
-              <p class="picker-label">Break</p>
-              <div class="picker-value">
-                <button class="picker-control" data-direction="down">−</button>
-                <span class="value" data-field-value>5</span>
-                <button class="picker-control" data-direction="up">+</button>
+            <div class="number-picker" data-field="relaxMinutes">
+              <div class="picker-header">
+                <p class="picker-label">Relax</p>
+                <span class="picker-hint">minutes</span>
               </div>
-              <p class="picker-hint">minutes</p>
+              <div class="picker-body">
+                <div class="picker-controls">
+                  <button
+                    class="picker-control"
+                    data-direction="up"
+                    aria-label="Increase relax"
+                  >
+                    +
+                  </button>
+                  <button
+                    class="picker-control"
+                    data-direction="down"
+                    aria-label="Decrease relax"
+                  >
+                    −
+                  </button>
+                </div>
+                <input
+                  class="picker-input"
+                  type="number"
+                  inputmode="numeric"
+                  aria-label="Relax minutes"
+                  data-field-value
+                  value="5"
+                />
+              </div>
             </div>
             <div class="number-picker" data-field="cycles">
-              <p class="picker-label">Cycles</p>
-              <div class="picker-value">
-                <button class="picker-control" data-direction="down">−</button>
-                <span class="value" data-field-value>4</span>
-                <button class="picker-control" data-direction="up">+</button>
+              <div class="picker-header">
+                <p class="picker-label">Cycles</p>
+                <span class="picker-hint">sets</span>
               </div>
-              <p class="picker-hint">sets</p>
+              <div class="picker-body">
+                <div class="picker-controls">
+                  <button
+                    class="picker-control"
+                    data-direction="up"
+                    aria-label="Increase cycles"
+                  >
+                    +
+                  </button>
+                  <button
+                    class="picker-control"
+                    data-direction="down"
+                    aria-label="Decrease cycles"
+                  >
+                    −
+                  </button>
+                </div>
+                <input
+                  class="picker-input"
+                  type="number"
+                  inputmode="numeric"
+                  aria-label="Cycles"
+                  data-field-value
+                  value="4"
+                />
+              </div>
             </div>
           </div>
-
           <p class="summary" id="plan-summary">25 / 5 × 4 ≈ 2 hours</p>
-
           <div class="action-buttons">
             <button class="btn btn-primary" id="apply-plan">Apply</button>
             <button class="btn btn-ghost" id="save-plan">Save Plan</button>
           </div>
-
           <div class="switches">
             <label class="switch">
               <input type="checkbox" id="auto-cycle" checked />
@@ -115,16 +196,16 @@
               <span class="switch-label">Sound</span>
             </label>
           </div>
-
           <div class="theme-toggle">
             <p class="section-label">Theme</p>
             <div class="theme-buttons">
-              <button class="theme-button active" data-theme="night">Night</button>
+              <button class="theme-button active" data-theme="night">
+                Night
+              </button>
               <button class="theme-button" data-theme="day">Day</button>
             </div>
           </div>
         </div>
-
         <div class="tab-panel" id="select-panel" role="tabpanel">
           <p class="section-label">Saved Plans</p>
           <div class="placeholder-card">
@@ -132,11 +213,9 @@
             <p class="muted">Sign in to keep plans in sync soon.</p>
           </div>
         </div>
-
         <button class="btn btn-disabled" id="sign-in">Sign In</button>
       </aside>
     </div>
-
     <script type="module" src="src/js/main.js"></script>
   </body>
 </html>
