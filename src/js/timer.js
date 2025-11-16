@@ -3,6 +3,14 @@
 // States: ready → running (focus) → running (relax) → waiting/ready, with pause/resume support.
 
 import { getPlanSettings, getPreferences } from "./state.js";
+import {
+  playCountdownSound,
+  playModeSwitchSound,
+  playPauseSound,
+  playSessionStartSound,
+  startMetronome,
+  stopMetronome,
+} from "./sound.js";
 
 const timerEvents = new EventTarget();
 let tickerId = null;
@@ -112,6 +120,13 @@ function handleTick() {
   }
 
   timerState.remainingSeconds -= 1;
+  if (
+    timerState.status === "running" &&
+    timerState.remainingSeconds > 0 &&
+    timerState.remainingSeconds <= 5
+  ) {
+    playCountdownSound();
+  }
   emit();
 
   if (timerState.remainingSeconds <= 0) {
@@ -126,16 +141,15 @@ function handlePhaseCompletion() {
 
   if (timerState.phase === "focus") {
     startRelax();
-    playChime();
     emit("Relax started");
     return;
   }
 
   // Relax finished = full cycle completed.
   timerState.cyclesLeft = Math.max(timerState.cyclesLeft - 1, 0);
-  playChime();
 
   if (timerState.cyclesLeft <= 0) {
+    playModeSwitchSound("ready");
     initializeFromPlan();
     emit("Plan finished. Good job!");
     return;
@@ -150,6 +164,7 @@ function handlePhaseCompletion() {
   }
 
   prepareWaitingState();
+  playModeSwitchSound("waiting");
   emit(
     "Cycle finished — " +
       timerState.cyclesLeft +
@@ -174,17 +189,23 @@ function startFocus(message = "Timer started") {
   timerState.remainingSeconds =
     timerState.remainingSeconds || timerState.durationSeconds;
   timerState.isRunning = true;
+  playModeSwitchSound("focus");
+  playSessionStartSound("focus");
+  startMetronome();
   startTicker();
   emit(message);
 }
 
 function startRelax() {
+  stopMetronome();
   const plan = getPlanSettings();
   timerState.status = "running";
   timerState.phase = "relax";
   timerState.durationSeconds = plan.relaxMinutes * 60;
   timerState.remainingSeconds = timerState.durationSeconds;
   timerState.isRunning = true;
+  playModeSwitchSound("relax");
+  playSessionStartSound("relax");
   startTicker();
 }
 
@@ -192,38 +213,21 @@ function pauseTimer() {
   clearTicker();
   timerState.status = "paused";
   timerState.isRunning = false;
+  stopMetronome();
+  playModeSwitchSound("paused");
+  playPauseSound();
   emit("Timer paused");
 }
 
 function resumeTimer() {
   timerState.status = "running";
   timerState.isRunning = true;
+  if (timerState.phase === "focus") {
+    startMetronome();
+  }
+  playSessionStartSound(timerState.phase);
   startTicker();
   emit("Timer resumed");
-}
-
-function playChime() {
-  const { sound } = getPreferences();
-  if (!sound) return;
-
-  try {
-    if (typeof window === "undefined") return;
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.value = 880;
-    gain.gain.value = 0.08;
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.start();
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    oscillator.stop(ctx.currentTime + 0.5);
-  } catch (error) {
-    // Fail silently to keep UX smooth if audio cannot play.
-  }
 }
 
 export function onTimerEvent(type, listener) {
@@ -253,12 +257,14 @@ export function performPrimaryAction() {
 
 export function resetTimer() {
   clearTicker();
+  stopMetronome();
   initializeFromPlan();
   emit("Timer reset");
 }
 
 export function applyPlanSettings() {
   clearTicker();
+  stopMetronome();
   initializeFromPlan();
   emit();
 }
