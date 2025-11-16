@@ -48,7 +48,9 @@ export function initUI() {
   const savePlanButton = document.getElementById("save-plan");
   const autoCycleToggle = document.getElementById("auto-cycle");
   const soundToggle = document.getElementById("sound-toggle");
-  const themeButtons = document.querySelectorAll(".theme-button");
+  const themeToggleButton = document.getElementById("theme-toggle");
+  const themeIcon = document.getElementById("theme-icon");
+  const themeText = document.getElementById("theme-text");
   const signInButton = document.getElementById("sign-in");
   const toast = document.getElementById("toast");
   const cyclesLeftNode = document.getElementById("cycles-left");
@@ -92,6 +94,7 @@ export function initUI() {
     updateDisplay(event.detail, event.detail.message)
   );
   updateDisplay(getTimerState());
+  updateSummaryText(summary);
 
   primaryButton.addEventListener("click", () => performPrimaryAction());
   timerCircle.addEventListener("click", () => performPrimaryAction());
@@ -163,14 +166,12 @@ export function initUI() {
   });
 
   const currentTheme = getTheme();
-  applyTheme(body, currentTheme, themeButtons);
+  applyTheme(body, currentTheme, themeIcon, themeText, themeToggleButton);
 
-  themeButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const theme = button.dataset.theme;
-      setTheme(theme);
-      applyTheme(body, theme, themeButtons);
-    });
+  themeToggleButton.addEventListener("click", () => {
+    const nextTheme = getTheme() === "night" ? "day" : "night";
+    setTheme(nextTheme);
+    applyTheme(body, nextTheme, themeIcon, themeText, themeToggleButton);
   });
 
   signInButton.addEventListener("click", () => {
@@ -229,6 +230,7 @@ function setupPicker(picker, summaryNode) {
     const limits = pickerLimits[field];
     const parsed = parseInt(input.value || "0", 10);
     pickerValues[field] = clamp(parsed, limits.min, limits.max);
+    updateSummaryText(summaryNode);
   });
 
   input.addEventListener("blur", () => {
@@ -297,9 +299,13 @@ function showToast(message, node) {
   }, 2400);
 }
 
-function applyTheme(body, theme, buttons) {
+function applyTheme(body, theme, iconNode, textNode, toggleButton) {
   body.setAttribute("data-theme", theme);
-  buttons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.theme === theme);
-  });
+  const isNight = theme === "night";
+  iconNode.textContent = isNight ? "🌙" : "☀️";
+  textNode.textContent = isNight ? "Night mode" : "Day mode";
+  toggleButton.setAttribute(
+    "aria-label",
+    isNight ? "Switch to day mode" : "Switch to night mode"
+  );
 }
