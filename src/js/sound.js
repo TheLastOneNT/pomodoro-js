@@ -1,5 +1,5 @@
 // sound.js
-// Centralized audio management for timer modes, session starts, metronome, and countdown cues.
+// Centralized audio management for timer modes, session starts and countdown cues.
 
 import { getPreferences, onStateEvent } from "./state.js";
 
@@ -11,7 +11,6 @@ const SOUND_PATHS = {
   focusStart: "sounds/focus-start.wav",
   relaxStart: "sounds/relax-start.mp3",
   countdown: "sounds/countdown.wav",
-  metronome: "sounds/metronome.mp3",
   relaxAmbient: "sounds/relax-ambient.mp3",
 };
 
@@ -23,23 +22,19 @@ const audioBank = {
   focusStart: createAudio(SOUND_PATHS.focusStart, 0.3),
   relaxStart: createAudio(SOUND_PATHS.relaxStart, 0.25),
   countdown: createAudio(SOUND_PATHS.countdown, 0.25),
-  metronome: createAudio(SOUND_PATHS.metronome, 0.3),
   relaxAmbient: createAudio(SOUND_PATHS.relaxAmbient, 0.2, true),
 };
 
 let isSoundEnabled = getPreferences().sound;
-let metronomeId = null;
 
 // 🔹 новый флаг – уже "разлочили" отложенные звуки или нет
 let deferredSoundsPrimed = false;
 
-// Keep local flag in sync with sidebar toggle; stop ambience + one-shots, но не ломаем интервал метронома.
+// синхронизация с переключателем звука в сайдбаре
 onStateEvent("preferences:change", (event) => {
   isSoundEnabled = event.detail.preferences.sound;
 
   if (!isSoundEnabled) {
-    audioBank.metronome.pause();
-    audioBank.metronome.currentTime = 0;
     stopRelaxAmbient();
     stopAllOneShots();
   }
@@ -70,7 +65,7 @@ function stopAllOneShots() {
   });
 }
 
-/* ---------- NEW: priming для мобилок ---------- */
+/* ---------- priming для мобилок ---------- */
 
 // вызываем один раз из обработчика клика (через timer.js)
 export function primeDeferredSounds() {
@@ -106,7 +101,7 @@ export function primeDeferredSounds() {
   });
 }
 
-/* ---------- Public API (как было) ---------- */
+/* ---------- Public API (как было, но без метронома) ---------- */
 
 export function playModeSwitchSound(mode) {
   if (mode === "focus") {
@@ -150,21 +145,9 @@ export function stopCountdownSound() {
   a.currentTime = 0;
 }
 
-export function startMetronome() {
-  if (!isSoundEnabled) return;
-  stopMetronome();
-  playClip(audioBank.metronome);
-  metronomeId = setInterval(() => playClip(audioBank.metronome), 1000);
-}
-
-export function stopMetronome() {
-  if (metronomeId) {
-    clearInterval(metronomeId);
-    metronomeId = null;
-  }
-  audioBank.metronome.pause();
-  audioBank.metronome.currentTime = 0;
-}
+// 🔇 метроном отключен: оставляем заглушки, чтобы ничего не падало
+export function startMetronome() {}
+export function stopMetronome() {}
 
 // Фон для перерыва
 export function startRelaxAmbient() {
