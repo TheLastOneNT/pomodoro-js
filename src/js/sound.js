@@ -145,7 +145,7 @@ export function stopCountdownSound() {
   a.currentTime = 0;
 }
 
-// 🔇 метроном отключен: оставляем заглушки, чтобы ничего не падало
+// 🔇 метроном отключен: оставляем заглушки
 export function startMetronome() {}
 export function stopMetronome() {}
 
