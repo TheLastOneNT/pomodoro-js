@@ -145,11 +145,11 @@ export function stopCountdownSound() {
   a.currentTime = 0;
 }
 
-// 🔇 метроном отключен: оставляем заглушки
+//  метроном отключен: оставляем заглушки
 export function startMetronome() {}
 export function stopMetronome() {}
 
-// Фон для перерыва
+// Фон
 export function startRelaxAmbient() {
   if (!isSoundEnabled) return;
   const a = audioBank.relaxAmbient;
