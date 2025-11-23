@@ -101,7 +101,7 @@ export function primeDeferredSounds() {
   });
 }
 
-/* ---------- Public API (без метронома) ---------- */
+/* ---------- Public API (без метронома) --------- */
 
 export function playModeSwitchSound(mode) {
   if (mode === "focus") {
