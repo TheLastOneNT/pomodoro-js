@@ -56,7 +56,7 @@ export function getTheme() {
 }
 
 export function setTheme(nextTheme) {
-  // Persist chosen theme for future visits.
+  // Persist chosen theme for future visits
   theme = nextTheme;
   saveTheme(nextTheme);
   emit("theme:change", { theme: nextTheme });
