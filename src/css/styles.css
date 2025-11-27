@@ -1024,8 +1024,8 @@ body[data-theme="day"] .theme-toggle-button:hover {
     flex: 1;
     padding: 0;
     display: flex;
-    align-items: center; /* центр по высоте */
-    justify-content: center; /* центр по ширине */
+    align-items: center;
+    justify-content: center;
     min-height: 100dvh;
   }
 
@@ -1092,6 +1092,10 @@ body[data-theme="day"] .theme-toggle-button:hover {
 
   .cycle-stats span {
     display: block;
+  }
+
+  .sidebar-header {
+    display: none;
   }
 
   .sidebar {
