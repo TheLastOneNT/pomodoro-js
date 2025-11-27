@@ -373,7 +373,9 @@ body.sidebar-open .overlay {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   z-index: 11;
 
   background: radial-gradient(
@@ -1091,6 +1093,7 @@ body[data-theme="day"] .theme-toggle-button:hover {
     width: min(320px, 72vw);
     padding: 16px;
     right: calc(-1 * min(320px, 72vw));
+    height: 100dvh;
     max-height: 100vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
