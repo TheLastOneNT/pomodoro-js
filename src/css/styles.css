@@ -18,7 +18,7 @@
 
 html,
 body,
-#root {
+#app {
   margin: 0;
   height: 100%;
   overflow: hidden;
@@ -817,7 +817,12 @@ body[data-tone="waiting"] {
 
 @media (max-width: 768px) {
   .app {
-    padding: 24px 16px 40px;
+    padding: 16px 16px 24px;
+    overflow: hidden;
+  }
+
+  .layout {
+    padding: 0 8px;
   }
 
   .timer-circle {
