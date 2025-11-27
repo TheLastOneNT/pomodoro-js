@@ -1107,4 +1107,17 @@ body[data-theme="day"] .theme-toggle-button:hover {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  .picker-control::before {
+    transform: none;
+    font-size: 22px;
+  }
+
+  .picker-control[data-direction="up"]::before {
+    content: "▲";
+  }
+
+  .picker-control[data-direction="down"]::before {
+    content: "▼";
+  }
 }
