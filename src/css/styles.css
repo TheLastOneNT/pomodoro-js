@@ -148,6 +148,14 @@ body {
   align-items: center;
 }
 
+/* обёртка для кнопок + статистики */
+.side-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
 .timer-circle {
   position: relative;
   width: min(320px, 70vw, 70vh);
@@ -236,11 +244,9 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   background: var(--tone-color);
   color: #041106;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-
   min-width: 130px;
   width: 130px;
   padding: 14px 20px;
@@ -377,7 +383,6 @@ body.sidebar-open .overlay {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   z-index: 11;
-
   background: radial-gradient(
     160% 200% at 10% 0%,
     var(--bg-elevated) 0%,
@@ -956,9 +961,6 @@ body[data-theme="day"] .number-picker {
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* стрелки и числа и так берут color из var(--text-main)/accent-*,
-   поэтому им новых правил не нужно */
-
 /* свитчи */
 body[data-theme="day"] .slider {
   background: #e5e7eb;
@@ -987,6 +989,7 @@ body[data-theme="day"] .theme-toggle-button:hover {
   box-shadow: 0 14px 28px rgba(148, 163, 184, 0.65);
 }
 
+/* ЛАНДШАФТ ≤ 900px — без отрицательных margin и grid */
 @media (max-width: 900px) and (orientation: landscape) {
   .app {
     position: relative;
@@ -1021,30 +1024,27 @@ body[data-theme="day"] .theme-toggle-button:hover {
     flex: 1;
     padding: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: center; /* центр по высоте */
+    justify-content: center; /* центр по ширине */
     min-height: 100dvh;
   }
 
   .timer-panel {
     max-width: none;
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr minmax(0, 1.1fr);
-    grid-template-rows: auto auto;
+    display: flex;
+    flex-direction: row;
     align-items: center;
-    justify-items: center;
-    row-gap: 6px;
+    justify-content: center;
+    gap: 32px;
+    text-align: left;
   }
 
   .timer-circle {
-    grid-column: 2;
-    grid-row: 1 / span 2;
     width: min(70vh, 70vw);
     height: min(70vh, 70vw);
     margin: 0;
     align-self: center;
-    justify-self: center;
   }
 
   .time-value {
@@ -1056,15 +1056,22 @@ body[data-theme="day"] .theme-toggle-button:hover {
     letter-spacing: 0.18rem;
   }
 
-  .controls {
-    grid-column: 1;
-    grid-row: 1;
+  .side-column {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 6px;
+    justify-content: center;
+    gap: 12px;
     max-width: 200px;
     width: 100%;
-    align-self: center;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    width: 100%;
+    margin-bottom: 0;
   }
 
   .controls .btn {
@@ -1074,8 +1081,6 @@ body[data-theme="day"] .theme-toggle-button:hover {
   }
 
   .cycle-stats {
-    grid-column: 1;
-    grid-row: 2;
     display: grid;
     gap: 4px;
     margin-top: 0;
@@ -1083,8 +1088,6 @@ body[data-theme="day"] .theme-toggle-button:hover {
     justify-items: start;
     font-size: 0.85rem;
     color: var(--text-muted);
-    max-width: 200px;
-    align-self: center;
   }
 
   .cycle-stats span {
