@@ -1023,6 +1023,7 @@ body[data-theme="day"] .theme-toggle-button:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 100dvh;
   }
 
   .timer-panel {
@@ -1033,7 +1034,7 @@ body[data-theme="day"] .theme-toggle-button:hover {
     grid-template-rows: auto auto;
     align-items: center;
     justify-items: center;
-    row-gap: 12px;
+    row-gap: 6px;
   }
 
   .timer-circle {
@@ -1060,7 +1061,7 @@ body[data-theme="day"] .theme-toggle-button:hover {
     grid-row: 1;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 6px;
     max-width: 200px;
     width: 100%;
     align-self: center;
@@ -1076,7 +1077,8 @@ body[data-theme="day"] .theme-toggle-button:hover {
     grid-column: 1;
     grid-row: 2;
     display: grid;
-    gap: 6px;
+    gap: 4px;
+    margin-top: 0;
     text-align: left;
     justify-items: start;
     font-size: 0.85rem;
