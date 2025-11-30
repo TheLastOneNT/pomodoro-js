@@ -989,7 +989,7 @@ body[data-theme="day"] .theme-toggle-button:hover {
   box-shadow: 0 14px 28px rgba(148, 163, 184, 0.65);
 }
 
-/* ЛАНДШАФТ ≤ 900px —без отрицательных margin и grid */
+/* ЛАНДШАФТ ≤ 900px — без отрицательных margin и grid */
 @media (max-width: 900px) and (orientation: landscape) {
   .app {
     position: relative;
